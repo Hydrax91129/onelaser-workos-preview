@@ -26,14 +26,14 @@ window.WORKOS_CONFIG = Object.freeze({ mode: 'live', apiBase: '/api' });
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input, init = {}) => {
     const url = new URL(typeof input === 'string' ? input : input.url, location.href);
-    if (url.pathname.endsWith('/build-info.json')) return json({ frontendCommit:'b5c3791e8aea4ff5b81ef3d8d7a4205d1344837a' });
+    if (url.pathname.endsWith('/build-info.json')) return json({ frontendCommit:'' });
     if (!url.pathname.startsWith('/api/') && !url.pathname.includes('/api/')) return realFetch(input, init);
     const path = url.pathname.slice(url.pathname.indexOf('/api/') + 4), method = (init.method || 'GET').toUpperCase(), body = init.body ? JSON.parse(init.body) : null;
     await new Promise(r => setTimeout(r, 120));
     let m;
     if (path === '/auth/csrf') return json({ csrfToken:'preview' });
     if (path === '/capabilities') return json({ assignTasks:true, taskCompletion:true, orgProfiles:true, feedback:true, projects:false });
-    if (path === '/me') return json(me);
+    if (path === '/me') { if (!window.__slowMeDone) { window.__slowMeDone = true; await new Promise(r => setTimeout(r, 1800)); } return json(me); } // slowMe: first load is slow so the loading screen can be seen
     if (path === '/directory') return json({ items:[me, kc, amy], reviewers:[], former:[] });
     if (path === '/tasks' && method === 'GET') return json({ items:structuredClone(tasks) });
     if (path === '/tasks' && method === 'POST') { const t = base('t' + (++seq), body.title, { description:body.description, criteria:body.criteria, board_priority:body.boardPriority, due_at:body.dueAt, baseline_due_at:body.dueAt, board_status:'not_started', board_group_id:body.boardGroupId || 'todo', effective_group_id:body.boardGroupId || 'todo', parent_task_id:body.parentTaskId, created_at:iso(Date.now()), last_update_at:iso(Date.now()) }); tasks.unshift(t); return json(t, 201); }

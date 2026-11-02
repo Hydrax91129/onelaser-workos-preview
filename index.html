@@ -1,14 +1,14 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-  <script>try{if(!localStorage.getItem("onelaser-workos-language"))localStorage.setItem("onelaser-workos-language","zh")}catch(e){}if(!location.hash)location.hash="tasks";</script>
+  <script>try{if(!localStorage.getItem("onelaser-workos-language"))localStorage.setItem("onelaser-workos-language","zh")}catch(e){}</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0073ea">
   <meta name="description" content="OneLaser 工作与成果管理交互原型。通过任务、OKR和有证据的成果验收，让计划与真实产出连接。">
   <title>OneLaser · 工作与成果</title>
   <script src="./preferences.js?v=c7255b01e3"></script>
-  <link rel="stylesheet" href="./styles.css?v=9810964eab">
+  <link rel="stylesheet" href="./styles.css?v=125e5c5afe">
   <link rel="stylesheet" href="./fonts.css?v=707327a32c">
   <link rel="stylesheet" href="./brand.css?v=e894ce0a46">
   <link rel="stylesheet" href="./wiki.css?v=bf1b265f2f">
@@ -23,11 +23,11 @@
   <script src="./wiki.js?v=a14dbcabb9" defer></script>
   <script src="./wiki-assistant.js?v=4ae541e22b" defer></script>
   <script src="./company-support.js?v=167fc56f68" defer></script>
-  <script src="./live-app.js?v=8ed9228d2e" defer></script>
+  <script src="./live-app.js?v=7dca2f18ba" defer></script>
   <link rel="stylesheet" href="./assets/phosphor/style.css">
   <link rel="stylesheet" href="./task-board.css?v=0b5ff2e878">
   <script src="./task-board.js?v=ce25424e6c" defer></script>
-  <link rel="stylesheet" href="./workspace-ui.css?v=f5608324c0">
+  <link rel="stylesheet" href="./workspace-ui.css?v=9857a5e905">
   <link rel="stylesheet" href="./team-board.css?v=88f35a1f14">
   <link rel="stylesheet" href="./task-flat.css?v=97b47e84f1">
   <link rel="stylesheet" href="./okr-board.css?v=6e426ed391">
@@ -40,28 +40,28 @@
   <link rel="stylesheet" href="./login.css?v=74963a6dd4">
   <link rel="stylesheet" href="./nav-groups.css?v=3be3a40f25">
   <script src="./people.js?v=cb912bde47" defer></script>
-  <link rel="stylesheet" href="./reports.css?v=e6a9b08b61">
-  <script src="./reports.js?v=99301b52eb" defer></script>
-  <link rel="stylesheet" href="./products.css?v=1ca5be5a4b">
-  <script src="./products.js?v=e293c053fe" defer></script>
+  <link rel="stylesheet" href="./reports.css?v=b7308e8d4d">
+  <script src="./reports.js?v=2877c2952f" defer></script>
+  <link rel="stylesheet" href="./products.css?v=ac985eb23e">
+  <script src="./products.js?v=378d577b5f" defer></script>
   <link rel="stylesheet" href="./quality.css?v=ab9eeb8e60">
   <script src="./quality.js?v=f444de6818" defer></script>
   <link rel="stylesheet" href="./help-tips.css?v=3036c8ac21">
-  <script src="./help-tips.js?v=0c80d9456d" defer></script>
+  <script src="./help-tips.js?v=7fd021f260" defer></script>
   <link rel="stylesheet" href="./erp-access.css?v=b188b267cd">
   <script src="./erp-access.js?v=b2d0d441bd" defer></script>
-  <link rel="stylesheet" href="./wms.css?v=1574a5157f">
-  <script src="./wms.js?v=848d36ca73" defer></script>
+  <link rel="stylesheet" href="./wms.css?v=f6eaaf500d">
+  <script src="./wms.js?v=d8ac6c971a" defer></script>
   <link rel="stylesheet" href="./feedback.css?v=480abef923">
   <script src="./feedback.js?v=02f59e8502" defer></script>
   <link rel="stylesheet" href="./changelog.css?v=9506e99af4">
-  <script src="./changelog.js?v=c6f624dfd0" defer></script>
+  <script src="./changelog.js?v=176e486e00" defer></script>
   <link rel="stylesheet" href="./user-guide.css?v=1da8e36549">
   <script src="./user-guide.js?v=eec87c8b77" defer></script>
   <script src="./contrast-guard.js?v=cdc84653de" defer></script>
 </head>
 <body>
-  <div style="position:fixed;z-index:9999;left:50%;transform:translateX(-50%);bottom:10px;background:#1f2433;color:#fff;font:13px/1.4 system-ui;padding:6px 12px;border-radius:8px;opacity:.9;pointer-events:none">预览 · 示例数据，不连接正式站</div>
+  <div style="position:fixed;z-index:9999;left:50%;transform:translateX(-50%);bottom:10px;background:#1f2433;color:#fff;font:13px/1.4 system-ui;padding:6px 12px;border-radius:8px;opacity:.9;pointer-events:none">预览 · 示例数据（首次加载故意放慢 1.8 秒）</div>
   <div id="app"></div>
   <div id="overlay-root"></div>
   <div id="toast" role="status" aria-live="polite"></div>
