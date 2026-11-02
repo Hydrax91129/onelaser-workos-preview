@@ -1,0 +1,246 @@
+/* Work OS shared UI. User-selected task board is the visual source of truth.
+   Loaded last to retire legacy marketing-scale controls across every route. */
+@font-face{font-family:Figtree;src:url('./fonts/Figtree-Variable.ttf') format('truetype');font-weight:300 900;font-display:swap}
+html:root{
+ --font:Figtree,'PingFang SC','Microsoft YaHei',sans-serif;--display:var(--font);
+ --mb-bg:#fff;--mb-sidebar:#f6f7fb;--mb-cell:#fff;--mb-hover:#f5f6fa;--mb-line:#d0d4e4;
+ --mb-text:#323338;--mb-muted:#676879;--mb-pop:#fff;--mb-selected:#cce5ff;--mb-active:#cce5ff;--mb-blue:#0073ea;
+ --bg:var(--mb-bg);--surface:var(--mb-cell);--surface-soft:var(--mb-hover);--border:var(--mb-line);
+ --ink:var(--mb-text);--navy:var(--mb-text);--muted:var(--mb-muted);--selected:var(--mb-selected);
+ --blue:#0073ea;--blue-ink:#0060b9;--blue-wash:#eaf4ff;--action:#0073ea;--action-hover:#0060b9;--accent:#0073ea;--focus:#0073ea;
+ --green:#126e4d;--green-wash:#e0f7ed;--amber:#865500;--amber-wash:#fff1d6;--red:#b42f50;--red-wash:#ffe8ef;
+ --radius:8px;--shadow:0 8px 24px #0002;
+}
+html:root[data-theme=dark]{
+ --mb-bg:#181b34;--mb-sidebar:#242944;--mb-cell:#31324e;--mb-hover:#393d59;--mb-line:#4c4e69;
+ --mb-text:#d5d6e2;--mb-muted:#b2b4ca;--mb-pop:#30334f;--mb-selected:#133774;--mb-active:#133774;
+ --blue:#8dbbff;--blue-ink:#b4d3ff;--blue-wash:#203d69;--action:#0073ea;--action-hover:#0060b9;--accent:#8dbbff;--focus:#8dbbff;
+ --green:#8ce5bd;--green-wash:#1c4b40;--amber:#ffd28e;--amber-wash:#51442e;--red:#ffadbd;--red-wash:#533044;
+ --shadow:0 8px 24px #0004;
+}
+html:root body{font:400 14px/1.5 var(--font);background:var(--bg);color:var(--ink)}
+html:root :is(button,input,select,textarea){font-family:var(--font);letter-spacing:normal}
+html:root :is(h1,h2,h3,h4){font-family:var(--font);font-weight:600;letter-spacing:normal;color:var(--ink)}
+html:root :is(button,a,input,select,textarea):focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+html:root a{color:var(--blue)}
+
+/* One shell for task board, all authenticated views and public Wiki. */
+html:root .app-shell{grid-template-columns:224px minmax(0,1fr);font-family:var(--font);background:var(--bg);color:var(--ink)}
+html:root .sidebar{width:224px;padding:24px 14px 14px;background:var(--mb-sidebar);border-color:var(--border);overflow-y:auto}
+html:root .main-frame{margin-left:0;width:100%;min-width:0;background:var(--bg)}
+html:root .sidebar .brand{padding:0 9px 20px}
+html:root .brand small{font-family:var(--font);color:var(--muted)}
+html:root .nav-label{font:600 12px/1.5 var(--font);letter-spacing:.04em;color:var(--muted)}
+html:root .sidebar .nav-item{font:400 14px/1.4 var(--font);min-height:36px;border-radius:4px;padding:9px 10px;margin:2px 0;gap:10px;color:var(--ink)}
+html:root .sidebar .nav-item svg{width:17px;height:17px;color:var(--muted);background:transparent}
+html:root .sidebar .nav-item:hover{background:var(--surface-soft)}
+html:root .sidebar .nav-item.active{background:var(--selected);color:var(--ink);font-weight:500}
+html:root .sidebar .nav-item.active svg{color:var(--ink);background:transparent}
+html:root .sidebar .nav-count{background:var(--surface);color:var(--blue);border-radius:3px}
+html:root .workspace-switch{font:400 14px/1.4 var(--font);border-radius:4px;padding:10px;gap:8px;background:var(--surface);border-color:var(--border);color:var(--ink)}
+html:root .workspace-symbol{background:var(--surface-soft);color:var(--muted);border-radius:4px}
+html:root :is(.identity,.sidebar-bottom){border-color:var(--border)}
+html:root .identity{padding-top:14px}
+html:root .identity .live-user-name{font-size:12px;font-weight:600}
+html:root .trial-card{display:none}
+html:root .topbar{height:46px;min-height:46px;padding:0 30px;gap:16px;background:var(--bg);border:0;color:var(--muted)}
+html:root .topbar .breadcrumb{font-size:12px;color:var(--muted)}
+html:root .breadcrumb strong{color:var(--muted)}
+html:root .topbar .env,html:root .live-mode-strip{display:none}
+html:root .content{padding:0 30px 36px;max-width:none;width:100%;min-width:0;background:var(--bg)}
+html:root .topbar-right{gap:10px}
+html:root .language-switch{background:var(--surface);border:0;border-radius:4px;gap:2px}
+html:root .language-switch button{min-height:32px;padding:5px 8px;border-radius:4px;font-size:12px;font-weight:400;color:var(--muted);background:transparent}
+html:root .language-switch button.active{background:var(--surface-soft);color:var(--ink);font-weight:600}
+html:root .theme-toggle{width:34px;height:34px;min-height:34px;border-radius:4px;padding:0;background:var(--surface);border-color:var(--border);color:var(--ink)}
+html:root .topbar .icon-btn{background:transparent;color:var(--muted);border:0;width:30px;height:30px}
+
+/* Shared type scale: 28 title / 20 section / 16 card / 14 body / 12 metadata. */
+html:root .page-heading{min-height:72px;margin:0 0 14px;padding:0 0 14px;align-items:center;gap:20px}
+html:root .page-heading h1,html:root .company-knowledge .page-heading h1{font-size:28px;line-height:1.25;font-weight:600;letter-spacing:normal}
+html:root .page-heading .eyebrow{display:none}
+html:root .page-heading p,html:root .company-knowledge .page-heading p{font-size:13px;line-height:1.5;margin:6px 0 0;color:var(--muted)}
+html:root .heading-actions{padding:0;gap:8px;flex-wrap:wrap}
+html:root :is(.panel-head h2,.section-title h2,.wiki-section h2,.wiki-heading h2,.live-login-panel h2){font-size:18px;font-weight:600;line-height:1.4}
+html:root :is(.objective-title,.objective-heading h3,.objective-text h3,.company-draft h3,.company-ticket-layout h3,.support-handover h3,.support-order-card h3){font-size:18px;font-weight:600;line-height:1.45}
+html:root :is(.todo-body h3,.mini-objective h3,.review-card-top h3,.integration-top h3,.definition-row h4){font-size:14px;font-weight:500;line-height:1.5}
+html:root :is(.fine,.hint,.caption,.scope-note,.stat-note,.stat-label,.panel-head p,.todo-meta,.task-sub,.integration-top p,.integration-bottom small){color:var(--muted);font-size:12px;line-height:1.5}
+html:root :is(.task-name,.performance-person strong,.kr-name,.kr-metric,.metric-cell strong){color:var(--ink);font-size:14px}
+html:root :is(.drawer-description,.criterion,.review-card p,.integration-description,.definition-row p,.settings-item){font-size:14px;line-height:1.65;color:var(--muted)}
+html:root .num{font-family:var(--font);letter-spacing:normal}
+
+/* Compact controls, with natural wrapping for bilingual content. */
+html:root .btn{min-height:34px;padding:7px 12px;gap:8px;border-radius:4px;font-size:14px;line-height:1.4;font-weight:400;background:var(--surface);border:1px solid var(--border);color:var(--ink)}
+html:root .btn:hover{background:var(--surface-soft);border-color:var(--muted)}
+html:root .btn.primary{min-height:34px;background:var(--action);border-color:var(--action);color:#fff;font-weight:500}
+html:root .btn.primary:hover{background:var(--action-hover);border-color:var(--action-hover)}
+html:root .btn.soft{background:var(--selected);color:var(--ink);border-color:transparent}
+html:root .btn.danger{color:var(--red)}
+html:root .btn.small{min-height:30px;padding:5px 9px;font-size:12px}
+html:root .icon-btn{width:34px;height:34px;border-radius:4px;background:var(--surface);border-color:var(--border);color:var(--muted)}
+html:root .icon-btn:hover{background:var(--surface-soft)}
+html:root :is(input,select,textarea){font:400 14px/1.5 var(--font);border-radius:4px;padding:7px 10px;min-height:36px;border-color:var(--border);background:var(--surface);color:var(--ink)}
+html:root :is(input,select,textarea):focus{border-color:var(--focus);box-shadow:none}
+html:root :is(input,textarea)::placeholder{color:var(--muted);opacity:.8}
+html:root :is(input[type=checkbox],input[type=radio]){min-height:0;min-width:0;width:16px;height:16px;padding:0;accent-color:var(--action)}
+html:root .field{gap:6px}
+html:root .field>span,html:root .field>label{font-size:12px;font-weight:500;color:var(--muted)}
+html:root .form-grid{gap:16px}
+html:root :is(.badge,.tag){font-size:12px;font-weight:400;line-height:1.4;border-radius:4px;padding:3px 7px;background:var(--surface-soft);color:var(--muted)}
+html:root .badge.blue{background:var(--blue-wash);color:var(--blue)}
+html:root .badge.green{background:var(--green-wash);color:var(--green)}
+html:root .badge.amber{background:var(--amber-wash);color:var(--amber)}
+html:root .badge.red{background:var(--red-wash);color:var(--red)}
+html:root .avatar{background:var(--selected);color:var(--ink);width:28px;height:28px;font-size:12px}
+
+/* Panels and shared tables. Task board cells keep their exact label colors. */
+html:root :is(.panel,.stat-card,.objective-card,.integration-card,.review-callout,.okr-statement,.okr-overview,.review-result,.notice,.insight-line,.entry-card){background:var(--surface);border-color:var(--border);border-radius:8px;box-shadow:none}
+html:root .panel-head{padding:14px 18px;gap:12px}
+html:root .panel-body{padding:18px}
+html:root .stat-card{padding:16px 18px;border-top:3px solid #579bfc}
+html:root .stat-card:nth-child(2){border-top-color:#b483d7}
+html:root .stat-card:nth-child(3){border-top-color:#34d391}
+html:root .stat-card:nth-child(4){border-top-color:#fdbc65}
+html:root .stat-value{font-size:30px;font-weight:500;line-height:1.25;margin:8px 0 6px}
+html:root .stats-grid{gap:16px;margin-bottom:20px}
+html:root :is(.task-table,.performance-table){font-size:14px;color:var(--ink)}
+html:root :is(.task-table th,.performance-table th){background:var(--surface-soft);color:var(--muted);font-size:13px;line-height:1.4;font-weight:400;padding:9px 12px;border-color:var(--border)}
+html:root :is(.task-table td,.performance-table td){font-size:14px;line-height:1.5;padding:10px 12px;border-color:var(--border);color:var(--ink)}
+html:root :is(.task-table th+th,.task-table td+td,.performance-table th+th,.performance-table td+td){border-left:1px solid var(--border)}
+html:root .task-table tbody tr:hover{background:var(--surface-soft)}
+html:root :is(.table-footer,.drawer-footer,.modal-footer,.artifact,.submit-form){background:var(--surface-soft);border-color:var(--border);color:var(--muted)}
+html:root :is(.todo-row,.kr-row,.review-card,.rubric-list li,.activity-list li::after){border-color:var(--border)}
+html:root :is(.todo-row,.mini-objective,.review-card){padding:14px 18px}
+html:root .todo-row:hover{background:var(--surface-soft)}
+html:root :is(.notice,.insight-line,.review-result){padding:12px 14px;background:var(--surface-soft);font-size:13px;color:var(--ink)}
+html:root .notice.amber{background:var(--amber-wash);border-color:var(--amber);color:var(--amber)}
+html:root .notice.green{background:var(--green-wash);border-color:var(--green);color:var(--green)}
+html:root .notice svg{color:currentColor}
+html:root .progress{background:var(--border);border-radius:2px}
+html:root .progress>span{background:var(--action);border-radius:2px}
+html:root .progress.green>span{background:#34d391}
+html:root .ring{background:conic-gradient(var(--action) var(--ring),var(--border) 0)}
+html:root .ring::before{background:var(--surface)}
+html:root .okr-plan{padding:16px 18px;gap:16px}
+html:root .okr-score-summary{padding:14px 18px}
+html:root .okr-fields-help{padding:14px 18px;border-radius:8px}
+html:root .okr-person-filter{margin:18px 0;gap:10px;font-size:13px}
+html:root .okr-person-filter select{font-size:14px;border-radius:4px;min-height:36px;padding:7px 32px 7px 10px}
+html:root .okr-person-group>header h2{font-size:20px;font-weight:500}
+html:root .objective-card-head{padding:16px 18px}
+html:root .objective-card{border-left:4px solid #579bfc}
+html:root .kr-row{padding:14px 18px}
+html:root .objective-card>.fine{padding:0 18px}
+html:root .okr-statement h2{font-size:20px;font-weight:500;line-height:1.5}
+html:root .integration-card{padding:18px}
+html:root .integration-logo{border-radius:4px;background:var(--surface-soft);color:var(--ink);border-color:var(--border)}
+html:root .integration-description{min-height:0}
+
+/* Every navigation strip uses the board's blue underline, not pill buttons. */
+html:root :is(.company-tabs,.wiki-nav,.okr-levels){display:flex;align-items:stretch;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--border);padding:0;margin-bottom:20px}
+html:root :is(.company-tabs .btn,.wiki-nav a,.okr-levels button){min-height:42px;padding:9px 12px;border:0;border-bottom:3px solid transparent;border-radius:0;background:transparent;color:var(--muted);font-size:14px;font-weight:400;text-decoration:none}
+html:root :is(.company-tabs .btn.primary,.wiki-nav a[aria-current=page],.wiki-nav a.active,.okr-levels button.active){border-bottom-color:#0085ff;background:transparent;color:var(--ink);font-weight:500}
+html:root :is(.company-tabs .btn:hover,.wiki-nav a:hover,.okr-levels button:hover){background:var(--surface-soft)}
+
+/* Form dialogs and detail drawers share the same workspace visual language. */
+html:root .overlay{background:#10142b66}
+html:root :is(.modal,.drawer){background:var(--surface);color:var(--ink);border-color:var(--border);border-radius:8px;box-shadow:var(--shadow)}
+html:root .drawer{border-radius:0;border-left:1px solid var(--border)}
+html:root :is(.modal-header,.modal-body,.drawer-body){padding:20px 24px}
+html:root :is(.modal-header h2,.drawer-header h2,.drawer-title){font-size:22px;font-weight:600;line-height:1.4}
+html:root :is(.drawer-section h3,.modal h3){font-size:16px;font-weight:600}
+html:root :is(.company-ticket-layout h4,.company-ticket-layout pre){font-size:14px}
+html:root .company-reply-panel textarea{font-size:14px}
+html:root :is(.support-quality-check,.support-reasons,.support-workflow-item,.support-restored-draft,.support-order-card,.support-shipment,.support-order-receipt,.company-document-table){border-radius:8px;border-color:var(--border)}
+html:root :is(.company-document,.company-prose){font-size:14px;line-height:1.75}
+html:root .company-document>h2{font-size:22px;font-weight:600}
+html:root .company-document>h3{font-size:18px;font-weight:600}
+html:root .company-document strong{font-weight:600}
+html:root .company-document-table{margin:18px 0}
+html:root .company-document :is(th,td){padding:10px 12px}
+html:root .support-workflow-list{padding:18px;gap:12px}
+html:root .support-workflow-item{padding:16px}
+
+/* Native Wiki: same UI, complete technical articles remain comfortable to read. */
+html:root :is(.wiki-family-card,.wiki-guide-card,.wiki-quick-link,.wiki-article-main,.wiki-article-sidebar,.wiki-article-toc,.wiki-empty,.wiki-error,.wiki-loading){border-radius:8px;border-color:var(--border);box-shadow:none}
+html:root :is(.wiki-family-card,.wiki-guide-card){padding:18px}
+html:root :is(.wiki-guide-card h3,.wiki-family-card h3){font-size:16px;font-weight:600}
+html:root .wiki-family-image{border-radius:4px}
+html:root .wiki-quick-link{font-weight:500;min-height:44px;padding:12px 14px}
+html:root .wiki-search input{height:36px;min-height:36px;border-radius:4px;font-size:14px;padding:7px 10px}
+html:root .wiki-search button,html:root .wiki-root .wiki-contact-button{border-radius:4px;min-height:36px;padding:8px 16px;background:var(--action);font-size:14px;font-weight:500}
+html:root :is(.wiki-chip,.wiki-filters select,.wiki-source-note,.wiki-original-note){border-radius:4px;font-size:13px;min-height:32px}
+html:root .wiki-contact{padding:28px 0}
+html:root .wiki-contact h2{font-size:24px;font-weight:600;margin-bottom:10px}
+html:root .wiki-contact p{font-size:14px}
+html:root .wiki-article-main{padding:24px}
+html:root .wiki-article-main>.wiki-heading h2{font-size:26px;font-weight:600}
+html:root .wiki-article-body{font-family:var(--font);font-size:16px;line-height:1.75}
+html:root .wiki-article-body :is(h1,h2,h3,h4,h5,h6){font-weight:600}
+html:root .wiki-article-body :is(pre,details,blockquote){border-radius:4px}
+html:root .assistant-launcher{border-radius:6px;background:var(--action);padding:12px 16px;font-weight:500}
+html:root .assistant-panel{border-radius:8px;background:var(--surface);border-color:var(--border)}
+html:root .assistant-panel h2{font-size:20px;font-weight:600}
+html:root :is(.assistant-primary,.assistant-starters button,.assistant-message,.assistant-source,.assistant-composer textarea,.assistant-feedback button,.assistant-handoff input[type=email],.assistant-handoff textarea){border-radius:4px}
+html:root .assistant-close{border-radius:4px}
+html:root .assistant-primary{background:var(--action);color:#fff}
+
+/* Login and demo gateway use the same scale without changing any entry routes. */
+html:root .gateway{background:var(--bg)}
+html:root .gateway-main h1{font-size:32px;line-height:1.25;font-weight:600;letter-spacing:normal}
+html:root .gateway-intro{font-size:14px;line-height:1.65}
+html:root .entry-card{padding:24px}
+html:root .entry-card h2{font-size:24px;font-weight:600}
+html:root .entry-card:hover{transform:none;border-color:var(--focus)}
+html:root .entry-icon{border-radius:6px;background:var(--blue-wash);color:var(--blue)}
+
+@media(max-width:1000px){
+ html:root .content{padding:0 20px 28px}
+ html:root .topbar{padding:0 20px}
+ html:root .page-heading{flex-wrap:wrap;gap:12px}
+ html:root .heading-actions{padding:0}
+}
+@media(max-width:670px){
+ html:root .app-shell{display:block}
+ html:root .sidebar{width:224px;padding:24px 14px 14px}
+ html:root .main-frame{margin-left:0;width:100%}
+ html:root .topbar{height:50px;min-height:50px;padding:0 14px;flex-wrap:nowrap;gap:8px}
+ html:root .topbar-right{gap:5px;flex-wrap:nowrap}
+ html:root .topbar .breadcrumb{gap:6px;min-width:0}
+ html:root .breadcrumb strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:32vw}
+ html:root .content{padding:0 14px 24px}
+ html:root .page-heading{padding:10px 0 12px;min-height:65px;margin-bottom:14px;gap:10px}
+ html:root .page-heading h1,html:root .company-knowledge .page-heading h1{font-size:24px;line-height:1.3}
+ html:root .page-heading p,html:root .company-knowledge .page-heading p{font-size:13px;line-height:1.5}
+ html:root .heading-actions{width:auto;flex-wrap:wrap;margin:0}
+ html:root :is(.panel-head,.panel-body,.stat-card,.todo-row,.mini-objective,.review-card,.objective-card-head,.kr-row,.okr-plan,.okr-score-summary){padding:14px}
+ html:root .panel-head{flex-wrap:wrap}
+ html:root .stats-grid{gap:10px}
+ html:root .stat-value{font-size:28px}
+ html:root .modal{border-radius:8px}
+ html:root :is(.modal-header,.modal-body,.drawer-body){padding:18px}
+ html:root .wiki-article-main{padding:18px}
+ html:root :is(.company-tabs,.wiki-nav,.okr-levels){gap:2px}
+ html:root :is(.company-tabs .btn,.wiki-nav a,.okr-levels button){padding:8px 10px;font-size:13px;min-height:40px}
+ html:root .wiki-article-main>.wiki-heading h2{font-size:24px}
+ html:root .assistant-panel{border-radius:0}
+ html:root .support-workflow-list{padding:14px}
+ html:root .okr-fields-help{padding:14px}
+}
+html:root button.todo-row{width:100%;text-align:left;border-radius:0}
+html:root .live-objective-mini h3{font-size:14px;font-weight:500}
+/* Keep the board's compact inline editor and every mobile heading aligned. */
+html:root .mb-search input{min-height:0}
+@media(max-width:670px){
+ html:root .page-heading{flex-direction:row;align-items:flex-start;text-align:left}
+ html:root .page-heading>div:first-child{width:100%;min-width:0}
+ html:root .topbar .breadcrumb>span{display:none}
+}
+/* Task drawer: title, outcome and criteria open the editor when you may change them */
+.drawer-title.is-editable,.drawer-section.is-editable{cursor:pointer;border-radius:8px;transition:background .15s}
+.drawer-title.is-editable:hover,.drawer-section.is-editable:hover{background:var(--hover,#f3f6ff)}
+.drawer-section.is-editable{margin-left:-8px;margin-right:-8px;padding-left:8px;padding-right:8px}
+.drawer-section h3 .drawer-edit-hint{margin-left:8px;font-size:12px;font-weight:400;color:var(--muted,#6b7185);opacity:0;transition:opacity .15s}
+.drawer-section.is-editable:hover .drawer-edit-hint,.drawer-section.is-editable:focus-within .drawer-edit-hint{opacity:1}
+.drawer-section h3 .drawer-edit-hint .icon{width:12px;height:12px;vertical-align:-1px}
+[data-theme=dark] .drawer-title.is-editable:hover,[data-theme=dark] .drawer-section.is-editable:hover{background:#ffffff0d}

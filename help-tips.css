@@ -1,0 +1,23 @@
+/* Hover help: tooltip, page (?) icon and top-bar hint toggle. */
+.help-tip{position:fixed;z-index:400;max-width:300px;padding:11px 13px;border-radius:8px;background:#2b2c33;color:#f3f3f5;box-shadow:0 10px 30px #1b1b2233;font-size:12px;line-height:1.55;pointer-events:none;animation:help-in .12s ease-out}
+.help-tip[hidden]{display:none}
+.help-tip.help-tip-wide{max-width:380px;pointer-events:auto}
+.help-tip-title{font-weight:600;font-size:13px;margin-bottom:6px;color:#fff}
+.help-tip-row{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:start}
+.help-tip-row+.help-tip-row{margin-top:5px}
+.help-tip-row span{flex-shrink:0;padding:1px 6px;border-radius:4px;background:#ffffff1f;color:#c9d6ff;font-size:11px;white-space:nowrap;line-height:1.6}
+.help-tip-row p{margin:0}
+@keyframes help-in{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+html[data-theme=dark] .help-tip{background:#f1f1f4;color:#2a2a30;box-shadow:0 10px 30px #0006}
+html[data-theme=dark] .help-tip-title{color:#16161a}
+html[data-theme=dark] .help-tip-row span{background:#0073ea1a;color:#0b5cb8}
+
+.help-page-icon,.help-toggle{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border);background:var(--surface,#fff);color:var(--muted);cursor:pointer;font-family:var(--font);font-weight:600;padding:0;line-height:1}
+.help-page-icon{width:20px;height:20px;min-height:0;border-radius:50%;margin-left:10px;vertical-align:middle;font-size:12px;position:relative;top:-2px}
+.help-page-icon:hover,.help-page-icon:focus-visible,.help-toggle:hover,.help-toggle:focus-visible{color:#0073ea;border-color:#0073ea}
+.help-toggle{width:34px;height:34px;min-height:34px;border-radius:4px;font-size:15px;flex-shrink:0}
+.help-toggle[aria-pressed=true]{color:#0073ea;border-color:#0073ea55;background:#0073ea0f}
+.help-toggle.help-off{color:var(--muted);opacity:.7}
+.help-toggle.help-off span{text-decoration:line-through}
+@media (hover:none){.help-tip:not(.help-tip-wide){display:none}}
+@media (prefers-reduced-motion:reduce){.help-tip{animation:none}}
