@@ -26,7 +26,7 @@ window.WORKOS_CONFIG = Object.freeze({ mode: 'live', apiBase: '/api' });
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input, init = {}) => {
     const url = new URL(typeof input === 'string' ? input : input.url, location.href);
-    if (url.pathname.endsWith('/build-info.json')) return json({ frontendCommit:'1d848aa2566fe4f6d4fb2353c4817d575f2b998c' });
+    if (url.pathname.endsWith('/build-info.json')) return json({ frontendCommit:'b5c3791e8aea4ff5b81ef3d8d7a4205d1344837a' });
     if (!url.pathname.startsWith('/api/') && !url.pathname.includes('/api/')) return realFetch(input, init);
     const path = url.pathname.slice(url.pathname.indexOf('/api/') + 4), method = (init.method || 'GET').toUpperCase(), body = init.body ? JSON.parse(init.body) : null;
     await new Promise(r => setTimeout(r, 120));
