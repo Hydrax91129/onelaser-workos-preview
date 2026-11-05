@@ -17,7 +17,7 @@ window.WORKOS_CONFIG = Object.freeze({ mode: 'live', apiBase: '/api' });
   // Sample deliverable images (drawn here) and any images uploaded during the preview; nothing leaves the browser.
   const pic = (bg, label) => 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="420"><rect width="600" height="420" fill="' + bg + '"/><text x="300" y="220" font-size="44" fill="#fff" text-anchor="middle" font-family="sans-serif">' + label + '</text></svg>');
   const files = new Map([['a1', pic('#3b82f6', 'v1 配件主图 1')], ['a2', pic('#0ea5e9', 'v1 配件主图 2')], ['a3', pic('#f59e0b', 'v2 补图 1')], ['a4', pic('#10b981', 'v2 补图 2')]]);
-  const att = (id, name) => ({ id, name, mime:'image/svg+xml', size:48000, uploader_id:'u1' });
+  const att = (id, name) => ({ id, name, mime:'image/png', size:48000, uploader_id:'u1' });
   const fixImages = root => {
     for (const el of root.querySelectorAll?.('[data-src*="/attachments/"]') || []) { const id = el.dataset.src.split('/').pop(); if (files.has(id)) el.dataset.src = files.get(id); }
     for (const el of root.querySelectorAll?.('img[src*="/attachments/"]') || []) { const id = el.getAttribute('src').split('/').pop(); if (files.has(id)) el.src = files.get(id); }
