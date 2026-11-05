@@ -10,6 +10,9 @@
   const S = () => ctx.state();
   const lang = () => ctx.lang() === 'en' ? 'en' : 'zh';
   const tr = (zh, en) => lang() === 'en' ? en : zh;
+  /* Factory contacts (quality tracking only); ids match the API's QUALITY_FACTORIES. */
+  const FACTORIES = [{ id:'dg', zh:'东莞工厂', en:'Dongguan factory' }, { id:'jn', zh:'济南工厂', en:'Jinan factory' }];
+  const factoryBadge = id => { const f = FACTORIES.find(x => x.id === id); return f ? `<span class="pp-badge factory">${icon('factory')} ${esc(tr(f.zh, f.en))}</span>` : ''; };
   const icon = n => `<i class="ph ph-${n}" aria-hidden="true"></i>`;
   const caps = () => S().capabilities?.orgProfiles === true;
   const me = () => S().actor;
@@ -99,18 +102,19 @@
     const head = heading(tr('任务分析', 'Task analysis'), tr('按汇报线汇总：所有直接和间接向你汇报的同事的任务完成度、准时率和逾期情况。', 'Task completion, on-time rate and overdue work for everyone who reports to you, directly or indirectly.'), `${scopeSwitch}<button class="btn" data-pp="reload-team">${icon('arrows-clockwise')} ${tr('刷新', 'Refresh')}</button>`);
     if (ui.teamLoading && !d) return `<div class="pp">${head}<p class="pp-hint">${tr('正在读取…', 'Loading…')}</p></div>`;
     if (ui.teamError) return `<div class="pp">${head}<div class="pp-alert">${esc(ui.teamError)}</div></div>`;
+    const dotted = d.scope === 'all' ? [] : d.members.filter(m => m.line === 'second');
     if (!d.members.length) return `<div class="pp">${head}<div class="pp-empty big">${icon('tree-structure')}<h3>${tr('还没有人向你汇报', 'No one reports to you yet')}</h3><p>${tr('汇报线由管理员在“组织与权限”里设置。设置后，这里会显示团队成员的任务完成度、准时率和逾期情况。', 'Reporting lines are set by an administrator in Organization & permissions. Then this page shows completion, on-time rate and overdue work for your team.')}</p>${me().isAdmin ? `<button class="btn primary" data-live-page="org">${tr('去设置汇报线', 'Set reporting lines')}</button>` : ''}</div></div>`;
     const sorted = [...d.members].sort((a, b) => (b.stats.overdue - a.stats.overdue) || ((a.stats.completionRate ?? 101) - (b.stats.completionRate ?? 101)));
     return `<div class="pp">${head}${window.WorkOSInsights?.slot('task') || ''}
-      <div class="pp-stats">
+      ${t ? `<div class="pp-stats">
         ${stat(tr('团队人数', 'People'), d.members.length, d.scope === 'all' ? tr('全公司', 'Whole company') : tr(`直属 ${d.members.filter(m => (m.depth || 1) <= 1).length} + 间接 ${d.members.filter(m => m.depth > 1).length}`, `${d.members.filter(m => (m.depth || 1) <= 1).length} direct + ${d.members.filter(m => m.depth > 1).length} indirect`))}
         ${stat(tr('任务完成度', 'Completion'), t.completionRate === null ? '—' : t.completionRate + '%', `${t.accepted}/${t.total} ${tr('已验收', 'accepted')}`)}
         ${stat(tr('准时完成率', 'On-time rate'), t.onTimeRate === null ? '—' : t.onTimeRate + '%', t.onTimeUnknown ? tr(`验收时间覆盖 ${t.onTimeKnown}/${t.accepted}`, `Acceptance time coverage ${t.onTimeKnown}/${t.accepted}`) : tr('验收时间不晚于截止日', 'Accepted by the due date'))}
-        ${stat(tr('平均质量分', 'Avg quality'), t.avgQuality ?? '—', tr('验收人打分', 'Reviewer score'))}
+        ${stat(tr('平均质量分（满分 10）', 'Avg quality (out of 10)'), t.avgQuality ?? '—', tr('验收人打分', 'Reviewer score'))}
         ${stat(tr('逾期未完成', 'Overdue'), t.overdue, `${t.dueSoon} ${tr('项 7 天内到期', 'due within 7 days')}`, t.overdue ? 'bad' : '')}
-      </div>
-      <section class="pp-panel pp-table-panel"><table class="pp-table"><thead><tr><th>${tr('成员', 'Member')}</th><th>${tr('任务', 'Tasks')}</th><th>${tr('完成度', 'Completion')}</th><th>${tr('准时率', 'On time')}</th><th>${tr('质量', 'Quality')}</th><th>${tr('待验收', 'In review')}</th><th>${tr('逾期', 'Overdue')}</th><th></th></tr></thead><tbody>
-        ${(d.scope === 'all' ? [['', sorted]] : [[tr('直属下属', 'Direct reports'), sorted.filter(m => (m.depth || 1) <= 1)], [tr('间接下属（下属的团队）', 'Indirect reports (their teams)'), sorted.filter(m => m.depth > 1)]]).filter(([, rows]) => rows.length).map(([label, rows]) => (label ? `<tr class="pp-group-row"><td colspan="8">${label} <b>${rows.length}</b></td></tr>` : '') + rows.map(m => { const s = m.stats, open = ui.teamOpen.has(m.id); return `<tr class="${s.overdue ? 'pp-row-bad' : ''}"><td><div class="pp-person">${avatar(m, 30)}<div><strong>${esc(m.display_name)}</strong><span>${esc(m.title || '')}${m.manager_id ? ` · ${tr('上级', 'reports to')} ${esc(nameOf(m.manager_id))}` : ''}</span></div></div></td><td>${s.total}<small> / ${s.open} ${tr('进行中', 'open')}</small></td><td><div class="pp-cell-bar">${pctBar(s.completionRate, s.completionRate !== null && s.completionRate < 50 ? 'warn' : '')}<b>${s.completionRate ?? '—'}${s.completionRate === null ? '' : '%'}</b></div></td><td>${s.onTimeRate === null ? '—' : s.onTimeRate + '%'}${s.onTimeUnknown ? `<small>${tr('已核实', 'Verified')} ${s.onTimeKnown}/${s.accepted}</small>` : ''}</td><td>${s.avgQuality ?? '—'}</td><td>${s.waiting}</td><td class="${s.overdue ? 'pp-bad' : ''}">${s.overdue}</td><td class="pp-row-actions"><button class="btn small primary" data-pp="view-tasks" data-id="${esc(m.id)}" title="${tr('打开 TA 的个人任务（只读），按 Esc 或“返回任务分析”回来', 'Open their task list (read-only); press Esc or “Back” to return')}">${icon('list-checks')} ${tr('查看任务', 'View tasks')}</button>${m.attention.length ? `<button class="btn small" data-pp="toggle-member" data-id="${esc(m.id)}">${open ? tr('收起', 'Hide') : tr('查看问题', 'Details')} (${m.attention.length})</button>` : ''}</td></tr>${open ? `<tr class="pp-sub"><td colspan="8">${m.attention.map(a => `<button class="pp-att-row" data-live-task="${esc(a.id)}"><span class="pp-att-tag ${a.overdue ? 'red' : 'amber'}">${a.overdue ? tr('已逾期', 'Overdue') : tr('被退回', 'Returned')}</span><span class="pp-att-title">${esc(a.title)}</span><span class="pp-att-meta">${fmtDate(a.dueAt)}</span></button>`).join('')}</td></tr>` : ''}`; }).join('')).join('')}
+      </div>` : ''}${dotted.length ? `<p class="pp-hint">${icon('git-branch')} ${tr(`其中 ${dotted.length} 人虚线汇报给你（你是 TA 的第二领导），权限和第一领导相同。`, `${dotted.length} of them report to you on a dotted line (you are their second leader), with the same rights as their first leader.`)}</p>` : ''}
+      <section class="pp-panel pp-table-panel"><table class="pp-table"><thead><tr><th>${tr('成员', 'Member')}</th><th>${tr('任务', 'Tasks')}</th><th>${tr('完成度', 'Completion')}</th><th>${tr('准时率', 'On time')}</th><th>${tr('质量（/10）', 'Quality (/10)')}</th><th>${tr('待验收', 'In review')}</th><th>${tr('逾期', 'Overdue')}</th><th></th></tr></thead><tbody>
+        ${(d.scope === 'all' ? [['', sorted]] : [[tr('直属下属', 'Direct reports'), sorted.filter(m => (m.depth || 1) <= 1 && m.line !== 'second')], [tr('间接下属（下属的团队）', 'Indirect reports (their teams)'), sorted.filter(m => m.depth > 1)], [tr('虚线汇报给我（第二领导）', 'Dotted-line reports to me (second leader)'), dotted.filter(m => (m.depth || 1) <= 1)]]).filter(([, rows]) => rows.length).map(([label, rows]) => (label ? `<tr class="pp-group-row"><td colspan="8">${label} <b>${rows.length}</b></td></tr>` : '') + rows.map(m => { const s = m.stats, open = ui.teamOpen.has(m.id); return `<tr class="${s.overdue ? 'pp-row-bad' : ''}"><td><div class="pp-person">${avatar(m, 30)}<div><strong>${esc(m.display_name)}</strong><span>${esc(m.title || '')}${m.manager_id ? ` · ${tr('上级', 'reports to')} ${esc(nameOf(m.manager_id))}` : ''}</span></div></div></td><td>${s.total}<small> / ${s.open} ${tr('进行中', 'open')}</small></td><td><div class="pp-cell-bar">${pctBar(s.completionRate, s.completionRate !== null && s.completionRate < 50 ? 'warn' : '')}<b>${s.completionRate ?? '—'}${s.completionRate === null ? '' : '%'}</b></div></td><td>${s.onTimeRate === null ? '—' : s.onTimeRate + '%'}${s.onTimeUnknown ? `<small>${tr('已核实', 'Verified')} ${s.onTimeKnown}/${s.accepted}</small>` : ''}</td><td>${s.avgQuality ?? '—'}</td><td>${s.waiting}</td><td class="${s.overdue ? 'pp-bad' : ''}">${s.overdue}</td><td class="pp-row-actions"><button class="btn small primary" data-pp="view-tasks" data-id="${esc(m.id)}" title="${tr('打开 TA 的个人任务（只读），按 Esc 或“返回任务分析”回来', 'Open their task list (read-only); press Esc or “Back” to return')}">${icon('list-checks')} ${tr('查看任务', 'View tasks')}</button>${m.attention.length ? `<button class="btn small" data-pp="toggle-member" data-id="${esc(m.id)}">${open ? tr('收起', 'Hide') : tr('查看问题', 'Details')} (${m.attention.length})</button>` : ''}</td></tr>${open ? `<tr class="pp-sub"><td colspan="8">${m.attention.map(a => `<button class="pp-att-row" data-live-task="${esc(a.id)}"><span class="pp-att-tag ${a.overdue ? 'red' : 'amber'}">${a.overdue ? tr('已逾期', 'Overdue') : tr('被退回', 'Returned')}</span><span class="pp-att-title">${esc(a.title)}</span><span class="pp-att-meta">${fmtDate(a.dueAt)}</span></button>`).join('')}</td></tr>` : ''}`; }).join('')).join('')}
       </tbody></table></section>
       <p class="pp-hint">${icon('info')} ${tr('指标只统计系统里有记录的任务；完成度 = 已验收 / 全部任务，准时率按验收时间与截止日比较。数据用于发现需要帮助的地方，不自动形成人事结论。', 'Metrics cover tasks recorded in this system. Completion = accepted / all tasks; on-time compares acceptance with the due date. Use them to spot where help is needed, not as automated HR decisions.')}</p>
     </div>`;
@@ -136,7 +140,9 @@
             <p class="pp-hint">${tr('支持 JPG / PNG / WebP，会自动裁成正方形并压缩。', 'JPG / PNG / WebP; cropped to a square and compressed automatically.')}</p></div></div>
           <dl class="pp-facts"><dt>${tr('姓名', 'Name')}</dt><dd>${esc(a.display_name)} <small>${tr('（来自钉钉）', '(from DingTalk)')}</small></dd>
             <dt>${tr('直属上级', 'Manager')}</dt><dd>${manager ? `${avatar(manager, 22)} ${esc(manager.display_name)}` : tr('未设置', 'Not set')}</dd>
-            <dt>${tr('直接下属', 'Direct reports')}</dt><dd>${reports.length ? reports.map(r => `${avatar(r, 22)} ${esc(r.display_name)}`).join('　') : '—'}</dd></dl>
+            <dt>${tr('直接下属', 'Direct reports')}</dt><dd>${reports.length ? reports.map(r => `${avatar(r, 22)} ${esc(r.display_name)}`).join('　') : '—'}</dd>
+            ${a.second_manager_id ? `<dt>${tr('第二领导（虚线汇报）', 'Second leader (dotted line)')}</dt><dd>${userById(a.second_manager_id) ? avatar(userById(a.second_manager_id), 22) : ''} ${esc(nameOf(a.second_manager_id))}</dd>` : ''}
+            ${(a.dottedOwnerIds || []).length ? `<dt>${tr('虚线汇报给我', 'Dotted-line reports to me')}</dt><dd>${a.dottedOwnerIds.map(id => `${userById(id) ? avatar(userById(id), 22) : ''} ${esc(nameOf(id))}`).join('　')}</dd>` : ''}</dl>
         </section>
         <section class="pp-panel"><h2>${tr('联系方式', 'Contact details')}</h2>
           <form id="pp-profile" class="form-grid">
@@ -144,7 +150,7 @@
             ${field('nameEn', tr('英文名', 'English name'), a.name_en, 'text', 'maxlength="60" required pattern="[A-Za-z0-9 .\'\\-]+" placeholder="Yi Chen"')}
             ${field('title', tr('职位', 'Title'), a.title, 'text', 'maxlength="80" placeholder="' + tr('例如：销售经理', 'e.g. Sales manager') + '"')}
             ${field('phone', tr('电话', 'Phone'), a.phone, 'tel', 'maxlength="40" placeholder="+1 949 555 0100"')}
-            ${field('email', tr('邮箱', 'Email'), a.email, 'email', 'maxlength="200"')}
+            ${a.email_locked ? `<label class="field"><span>${tr('工作邮箱', 'Work email')}</span><div class="pp-locked-field" title="${tr('由管理员设置', 'Set by an administrator')}">${icon('lock-simple')} ${esc(a.email || '')}<small>${tr('由管理员设置，如需修改请联系管理员', 'Set by an administrator; ask them to change it')}</small></div></label>` : field('email', tr('工作邮箱（必填，接收任务和催办）', 'Work email (required; tasks and reminders)'), a.email, 'email', 'maxlength="200" required placeholder="name@1laser.com"')}
             ${field('wechat', tr('微信', 'WeChat'), a.wechat, 'text', 'maxlength="60"')}
             <label class="field"><span>${tr('工作地点', 'Work location')}</span><div class="pp-locked-field" title="${tr('由管理员在“组织与权限”中设置', 'Set by an administrator in Organization & permissions')}">${icon('lock-simple')} ${esc(a.location || tr('未设置', 'Not set'))}<small>${tr('由管理员设置，如需修改请联系管理员', 'Set by an administrator; ask them to change it')}</small></div></label>
             <label class="field"><span>${tr('时区', 'Time zone')}</span><select name="timezone"><option value="">${tr('未设置', 'Not set')}</option>${zones.map(z => `<option value="${esc(z)}" ${z === a.timezone ? 'selected' : ''}>${esc(z)}</option>`).join('')}</select></label>
@@ -199,6 +205,7 @@
         <label>${tr('工作地点', 'Work location')}<input name="location" maxlength="80" placeholder="${tr('如 Irvine, CA / 武汉', 'e.g. Irvine, CA')}" list="pp-locations"></label>
         <label>${tr('直属上级', 'Manager')}<select name="managerId">${opt('', tr('无（最高层）', 'None (top)'))}${active.map(u => opt(u.id, u.display_name)).join('')}</select></label>
         <label>${tr('角色', 'Role')}<select name="role">${opt('employee', tr('员工', 'Employee'))}${opt('manager', tr('主管', 'Manager'))}</select></label>
+        <label>${tr('工厂对接人', 'Factory contact')}<select name="factory">${opt('', tr('否（公司成员）', 'No (company member)'))}${FACTORIES.map(f => opt(f.id, tr(f.zh, f.en))).join('')}</select><span class="pp-hint">${tr('选了工厂后，对方只能使用“产品质量追踪”，只看到本工厂的问题', 'Factory contacts only use product quality tracking and see only their factory’s issues')}</span></label>
         <div class="pp-invite-grants" ${erp() ? 'hidden' : ''}><label class="pp-check"><input type="checkbox" name="products"> ${tr('产品+供应链', 'Product hub')}</label><label class="pp-check"><input type="checkbox" name="product_cost_detail"> ${tr('成本明细', 'Cost detail')}</label>${ui.invites?.emailDelivery ? `<label class="pp-check"><input type="checkbox" name="sendEmail" checked> ${tr('同时发送邀请邮件', 'Also send an email')}</label>` : ''}</div>
         ${ui.inviteError ? `<div class="pp-alert">${esc(ui.inviteError)}</div>` : ''}
         <div class="pp-invite-actions"><button class="pp-btn primary" type="submit" ${ui.inviteBusy ? 'disabled' : ''}>${icon('link')} ${tr('生成邀请链接', 'Create invite link')}</button><span class="pp-hint">${tr('链接 7 天有效，只能使用一次；对方加入后自动出现在组织架构里。', 'Valid 7 days, single use; the person joins the org chart on acceptance.')}</span></div>
@@ -207,7 +214,7 @@
   function invitesList() {
     const list = (ui.invites?.items || []).filter(i => i.status === 'pending');
     if (!canInvite() || !list.length) return '';
-    return `<section class="pp-panel"><h3 class="pp-sub-h">${icon('envelope-simple')} ${tr('待接受的邀请', 'Pending invites')} <b>${list.length}</b></h3><table class="pp-table pp-invites"><tbody>${list.map(i => `<tr><td><strong>${esc(i.displayName)}</strong> <span class="pp-muted">${esc(i.email)}</span></td><td>${esc(i.title || '')}</td><td class="pp-muted">${tr('有效至', 'Expires')} ${fmtDay(i.expiresAt)}${i.emailed ? ` · ${tr('已发邮件', 'emailed')}` : ''}</td><td class="pp-right"><button class="pp-btn small danger" data-pp="invite-revoke" data-id="${esc(i.id)}">${tr('撤销', 'Revoke')}</button></td></tr>`).join('')}</tbody></table></section>`;
+    return `<section class="pp-panel"><h3 class="pp-sub-h">${icon('envelope-simple')} ${tr('待接受的邀请', 'Pending invites')} <b>${list.length}</b></h3><table class="pp-table pp-invites"><tbody>${list.map(i => `<tr><td><strong>${esc(i.displayName)}</strong> <span class="pp-muted">${esc(i.email)}</span>${i.factory ? ` ${factoryBadge(i.factory)}` : ''}</td><td>${esc(i.title || '')}</td><td class="pp-muted">${tr('有效至', 'Expires')} ${fmtDay(i.expiresAt)}${i.emailed ? ` · ${tr('已发邮件', 'emailed')}` : ''}</td><td class="pp-right"><button class="pp-btn small danger" data-pp="invite-revoke" data-id="${esc(i.id)}">${tr('撤销', 'Revoke')}</button></td></tr>`).join('')}</tbody></table></section>`;
   }
   function disablePanel(u, active) {
     const d = ui.disabling; if (!d || d.id !== u.id) return '';
@@ -235,21 +242,35 @@
     const statusCell = u => { if (!canDisable()) return '—'; if (u.id === me()?.id || u.executive) return `<span class="pp-lock" title="${tr('不能停用自己或总裁账号', 'You cannot disable yourself or an executive')}">${icon('lock-simple')} ${tr('在职', 'Active')}</span>`;
       return `<label class="pp-switch status" title="${tr('关闭即停用', 'Turn off to disable')}"><input type="checkbox" data-pp-status data-id="${esc(u.id)}" checked><span></span></label> <span class="pp-status-on">${tr('在职', 'Active')}</span>`; };
     const opt = (v, label, cur) => `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(label)}</option>`;
+    // HR records, per region (hr.js): none / read-only / manage. Only the company owner can change these (the server enforces it).
+    const hrCell = u => {
+      if (u.executive) return `<span class="pp-lock" title="${tr('公司负责人可以查看和管理全部地区', 'The company owner sees and manages every region')}">${icon('lock-simple')} ${tr('全部地区', 'All regions')}</span>`;
+      const g = u.grants || [], locked = !me()?.executiveAccess || !!u.quality_factory;
+      return `<div class="pp-hr" title="${u.quality_factory ? tr('工厂对接人不能使用人事档案', 'Factory contacts cannot use HR records') : !me()?.executiveAccess ? tr('只有公司负责人（主管理员）可以分配', 'Only the company owner can assign this') : ''}">${[['cn', tr('中国', 'China')], ['intl', tr('海外', 'Other')]].map(([r, label]) => {
+        const cur = g.includes(`hr_${r}_manage`) ? 'manage' : g.includes(`hr_${r}_view`) ? 'view' : '';
+        return `<label><em>${label}</em><select class="pp-inline ${cur ? 'on' : ''}" data-pp-hr="${r}" data-id="${esc(u.id)}" aria-label="${tr('人事档案', 'HR records')} · ${label}" ${locked ? 'disabled' : ''}>${opt('', tr('无', 'None'), cur)}${opt('view', tr('只读', 'Read-only'), cur)}${opt('manage', tr('可管理', 'Manage'), cur)}</select></label>`;
+      }).join('')}</div>`;
+    };
     const check = (u, grant, disabled = false) => `<label class="pp-switch"><input type="checkbox" data-pp-grant="${grant}" data-id="${esc(u.id)}" ${(u.grants || []).includes(grant) ? 'checked' : ''} ${disabled ? 'disabled' : ''}><span></span></label>`;
     return `<div class="pp">${head}${canInvite() && !ui.inviteOpen ? `<div class="pp-org-actions"><button class="btn primary" data-pp="invite-open">${icon('user-plus')} ${tr('邀请成员', 'Invite member')}</button><span class="pp-hint">${tr('邀请不在钉钉里的人加入；关闭“状态”开关即可停用某人。', 'Invite people outside DingTalk; turn off Status to disable someone.')}</span></div>` : ''}${invitePanel(items)}
-      <section class="pp-panel pp-table-panel"><table class="pp-table pp-org" data-help-table="pp-org"><thead><tr><th>${tr('成员', 'Member')}</th><th>${tr('职位', 'Title')}</th><th>${tr('工作地点', 'Work location')}</th><th>${tr('直属上级', 'Manager')}</th><th>${tr('角色', 'Role')}</th><th>${tr('管理员', 'Admin')}</th>${erp() ? '' : `<th>${tr('产品+供应链', 'Product hub')}</th><th>${tr('成本明细', 'Cost detail')}</th>`}<th>${tr('状态', 'Status')}</th></tr></thead><tbody>
-      ${orgGroups(items).map(([key, label, rows]) => `<tr class="pp-group-row ${key ? '' : 'unset'}"><td colspan="${erp() ? 7 : 9}"><span class="pp-group-name">${key ? `<span class="pp-flag" aria-hidden="true">${flagOf(label)}</span> ${esc(window.WorkOSTranslate?.text(label) ?? label)}` : `${icon('map-pin')} ${tr('未设置工作地点', 'No work location yet')}`}</span><b>${rows.length}</b>${key ? '' : `<em>${tr('填写工作地点后，成员会自动归入对应地点', 'Fill in a work location and the member moves to that group')}</em>`}</td></tr>${rows.map(u => `<tr><td><div class="pp-person">${avatar(u, 30)}<div><strong>${esc(u.display_name)}</strong><span>${esc(u.login_email || u.email || u.phone || '')} ${loginBadge(u)}</span><span class="pp-names"><label class="pp-name-field"><em>${tr('中文名', 'Chinese')}</em><input class="pp-inline pp-name ${u.name_zh ? '' : 'missing'}" data-pp-field="nameZh" data-id="${esc(u.id)}" value="${esc(u.name_zh || '')}" maxlength="40" placeholder="${tr('未填写', 'Not set')}" aria-label="${tr('中文名', 'Chinese name')}"></label><label class="pp-name-field"><em>${tr('英文名', 'English')}</em><input class="pp-inline pp-name ${u.name_en ? '' : 'missing'}" data-pp-field="nameEn" data-id="${esc(u.id)}" value="${esc(u.name_en || '')}" maxlength="60" placeholder="${tr('未填写', 'Not set')}" aria-label="${tr('英文名', 'English name')}"></label></span></div></div></td>
+      <section class="pp-panel pp-table-panel"><table class="pp-table pp-org" data-help-table="pp-org"><thead><tr><th>${tr('成员', 'Member')}</th><th>${tr('工作邮箱', 'Work email')}</th><th>${tr('职位', 'Title')}</th><th>${tr('工作地点', 'Work location')}</th><th>${tr('直属上级', 'Manager')}</th><th title="${tr('第一领导不方便时，由第二领导日常查看和指导；第二领导对这个人的权限和第一领导完全相同', 'When the first leader is unavailable, the second leader follows and guides day to day, with exactly the same rights over the person as the first leader')}">${tr('第二领导（虚线汇报）', 'Second leader (dotted line)')}</th><th>${tr('角色', 'Role')}</th><th>${tr('管理员', 'Admin')}</th>${erp() ? '' : `<th>${tr('产品+供应链', 'Product hub')}</th><th>${tr('成本明细', 'Cost detail')}</th>`}<th>${tr('人事档案', 'HR records')}</th><th>${tr('状态', 'Status')}</th></tr></thead><tbody>
+      ${orgGroups(items).map(([key, label, rows]) => `<tr class="pp-group-row ${key ? '' : 'unset'}"><td colspan="${erp() ? 10 : 12}"><span class="pp-group-name">${key ? `<span class="pp-flag" aria-hidden="true">${flagOf(label)}</span> ${esc(window.WorkOSTranslate?.text(label) ?? label)}` : `${icon('map-pin')} ${tr('未设置工作地点', 'No work location yet')}`}</span><b>${rows.length}</b>${key ? '' : `<em>${tr('填写工作地点后，成员会自动归入对应地点', 'Fill in a work location and the member moves to that group')}</em>`}</td></tr>${rows.map(u => `<tr><td><div class="pp-person">${avatar(u, 30)}<div><strong>${esc(u.display_name)}</strong><span>${esc(u.login_email || u.email || u.phone || '')} ${loginBadge(u)}${u.quality_factory ? ` ${factoryBadge(u.quality_factory)}` : ''}</span><span class="pp-names"><label class="pp-name-field"><em>${tr('中文名', 'Chinese')}</em><input class="pp-inline pp-name ${u.name_zh ? '' : 'missing'}" data-pp-field="nameZh" data-id="${esc(u.id)}" value="${esc(u.name_zh || '')}" maxlength="40" placeholder="${tr('未填写', 'Not set')}" aria-label="${tr('中文名', 'Chinese name')}"></label><label class="pp-name-field"><em>${tr('英文名', 'English')}</em><input class="pp-inline pp-name ${u.name_en ? '' : 'missing'}" data-pp-field="nameEn" data-id="${esc(u.id)}" value="${esc(u.name_en || '')}" maxlength="60" placeholder="${tr('未填写', 'Not set')}" aria-label="${tr('英文名', 'English name')}"></label></span></div></div></td>
+        <td><input class="pp-inline pp-email ${u.email ? '' : 'missing'}" type="email" data-pp-field="email" data-id="${esc(u.id)}" value="${esc(u.email || '')}" maxlength="200" placeholder="${tr('未填写', 'Missing')}" title="${u.email_locked ? tr('已由管理员设置，本人不能修改', 'Set by an admin; the person cannot change it') : tr('管理员填写后，本人不能修改', 'Once you set it, the person cannot change it')}">${u.email_locked ? `<i class="ph ph-lock-simple pp-email-lock" aria-label="${tr('已锁定', 'Locked')}"></i>` : ''}</td>
         <td><input class="pp-inline" data-pp-field="title" data-id="${esc(u.id)}" value="${esc(u.title || '')}" maxlength="80" placeholder="${tr('职位', 'Title')}"></td>
         <td><input class="pp-inline" data-pp-field="location" data-id="${esc(u.id)}" value="${esc(u.location || '')}" maxlength="80" placeholder="${tr('如 Irvine, CA / 武汉', 'e.g. Irvine, CA')}" list="pp-locations"></td>
         <td><select class="pp-inline" data-pp-field="managerId" data-id="${esc(u.id)}">${opt('', tr('无（最高层）', 'None (top)'), u.manager_id || '')}${items.filter(x => x.id !== u.id).map(x => opt(x.id, x.display_name, u.manager_id)).join('')}</select></td>
-        <td><select class="pp-inline" data-pp-field="role" data-id="${esc(u.id)}">${opt('employee', tr('员工', 'Employee'), u.role)}${opt('manager', tr('主管', 'Manager'), u.role)}</select></td>
+        <td><select class="pp-inline pp-second" data-pp-field="secondManagerId" data-id="${esc(u.id)}" title="${tr('第一领导不方便时，由第二领导日常查看和指导；第二领导对这个人的权限和第一领导完全相同', 'When the first leader is unavailable, the second leader follows and guides day to day, with exactly the same rights over the person as the first leader')}" aria-label="${tr('第二领导（虚线汇报）', 'Second leader (dotted line)')}">${opt('', tr('无', 'None'), u.second_manager_id || '')}${items.filter(x => x.id !== u.id && x.id !== u.manager_id).map(x => opt(x.id, x.display_name, u.second_manager_id || '')).join('')}</select></td>
+        <td><select class="pp-inline" data-pp-field="role" data-id="${esc(u.id)}">${opt('employee', tr('员工', 'Employee'), u.role)}${opt('manager', tr('主管', 'Manager'), u.role)}</select><select class="pp-inline pp-factory" data-pp-field="factory" data-id="${esc(u.id)}" title="${tr('工厂对接人只能使用产品质量追踪', 'Factory contacts only use product quality tracking')}">${opt('', tr('公司成员', 'Company member'), u.quality_factory || '')}${FACTORIES.map(f => opt(f.id, tr(`工厂对接人 · ${f.zh}`, `Factory contact · ${f.en}`), u.quality_factory || '')).join('')}</select></td>
         <td>${u.adminSource === 'deployment' ? `<span class="pp-lock" title="${tr('由部署配置指定，不能在这里取消', 'Set in deployment config')}">${icon('lock-simple')} ${tr('系统', 'System')}</span>` : `<label class="pp-switch"><input type="checkbox" data-pp-admin data-id="${esc(u.id)}" ${u.admin ? 'checked' : ''}><span></span></label>`}</td>
         ${erp() ? '' : `<td>${check(u, 'products')}</td><td>${check(u, 'product_cost_detail', !(u.grants || []).includes('products'))}</td>`}
+        <td>${hrCell(u)}</td>
         <td class="pp-status">${statusCell(u)}</td></tr>${disablePanel(u, items)}`).join('')}`).join('')}
       </tbody></table><datalist id="pp-locations">${[...new Set(ui.org.items.map(u => (u.location || '').trim()).filter(Boolean))].map(l => `<option value="${esc(l)}">`).join('')}</datalist></section>${invitesList()}
       ${disabled.length ? `<section class="pp-panel pp-disabled"><h3 class="pp-sub-h">${icon('user-minus')} ${tr('已停用成员', 'Disabled members')} <b>${disabled.length}</b></h3><table class="pp-table"><tbody>${disabled.map(u => `<tr><td><div class="pp-person dim">${avatar(u, 26)}<div><strong>${esc(u.display_name)}</strong><span>${esc(u.title || '')} ${loginBadge(u)}</span></div></div></td><td class="pp-muted">${u.disabled_at ? tr(`${fmtDay(u.disabled_at)} 停用`, `Disabled ${fmtDay(u.disabled_at)}`) : tr('已离开钉钉', 'Left DingTalk')}</td><td class="pp-right">${canDisable() ? `<button class="pp-btn small" data-pp="enable" data-id="${esc(u.id)}">${icon('arrow-counter-clockwise')} ${tr('恢复', 'Restore')}</button>` : ''}</td></tr>`).join('')}</tbody></table></section>` : ''}
-      <div class="pp-notes"><p>${icon('info')} ${tr('修改后立即保存并记录审计日志。“角色”设为主管后，可以管理本部门的任务和目标；钉钉重新登录不会覆盖这里的设置。', 'Changes save immediately and are audited. Managers can manage department tasks and goals; DingTalk re-login keeps these settings.')}</p>
-      ${erp() ? `<p>${icon('shield')} ${tr('产品、价格构成、供应链和仓库库存的权限已移到“产品+供应链 → ERP 权限”统一设置。', 'Product, pricing, supply-chain and warehouse access now live in Product hub → ERP permissions.')} <button class="btn small" data-live-page="erp-access">${tr('前往 ERP 权限', 'Open ERP permissions')}</button></p>` : `<p>${icon('lock-simple')} ${tr('“产品+供应链”只给需要的人开通；“成本明细”可以看到价格的计算过程，开通前请确认。客服工作台目前由部署配置管理。', 'Grant Product hub only to those who need it; Cost detail reveals how prices are calculated. Support access is currently managed in deployment config.')}</p>`}</div>
+      <div class="pp-notes"><p>${icon('git-branch')} <b>${tr('第二领导（虚线汇报）', 'Second leader (dotted line)')}</b>：${tr('第一领导不方便时，由第二领导日常查看和指导；第二领导对这个人的权限和第一领导完全相同：可以查看和管理 TA 的 OKR、任务和项目，验收、领导评分和审批；薪资等 HR 敏感信息仍只给 HR。', 'When the first leader is unavailable, the second leader follows and guides day to day, with exactly the same rights over the person as the first leader: they view and manage the person’s OKRs, tasks and projects, and can review, give leader scores and approve; salary and other sensitive HR data stay with HR.')}</p>
+      <p>${icon('info')} ${tr('修改后立即保存并记录审计日志。“角色”设为主管后，可以管理本部门的任务和目标；钉钉重新登录不会覆盖这里的设置。', 'Changes save immediately and are audited. Managers can manage department tasks and goals; DingTalk re-login keeps these settings.')}</p>
+      ${erp() ? `<p>${icon('shield')} ${tr('产品、价格构成、供应链和仓库库存的权限已移到“产品+供应链 → ERP 权限”统一设置。', 'Product, pricing, supply-chain and warehouse access now live in Product hub → ERP permissions.')} <button class="btn small" data-live-page="erp-access">${tr('前往 ERP 权限', 'Open ERP permissions')}</button></p>` : `<p>${icon('lock-simple')} ${tr('“产品+供应链”只给需要的人开通；“成本明细”可以看到价格的计算过程，开通前请确认。客服工作台目前由部署配置管理。', 'Grant Product hub only to those who need it; Cost detail reveals how prices are calculated. Support access is currently managed in deployment config.')}</p>`}
+      <p>${icon('identification-card')} ${tr('“人事档案”：中国和海外其他地区分别授权，只读可以查看这个地区的全部资料（包括证件号、银行信息、薪资和附件），可管理还能修改、上传和删除。美国区只有主管理员能看，不能授权给别人。', 'HR records: China and other countries are granted separately. Read-only sees everything in that region (ID numbers, bank details, salary, attachments); manage can also edit, upload and delete. The US region is for the company owner only and cannot be granted.')}</p></div>
     </div>`;
   }
   // Organization & permissions groups members by work location: members without one first (they need setting), then each location, largest first.
@@ -271,20 +292,52 @@
     try { ui.chart = await ctx.api.get('/org/chart'); window.WorkOSNames?.apply(ui.chart.items); } catch (e) { ui.chartError = ctx.explainError(e); }
     finally { ui.chartLoading = false; if (['orgchart', 'org'].includes(S().page)) ctx.rerender(); }
   }
+  /* Second leader (dotted line): [secondLeaderId, employeeId] pairs among the people on the chart. */
+  const dottedLinks = items => { const ids = new Set(items.map(u => u.id)); return items.filter(u => u.second_manager_id && u.second_manager_id !== u.id && ids.has(u.second_manager_id)).map(u => [u.second_manager_id, u.id]); };
+  /* A dashed curve from the second leader's card (a) to the employee's card (b); rects are {x,y,w,h} in chart coordinates.
+   * It runs side to side (the edges facing each other), so it never sits on the solid tree lines that use the cards' tops and bottoms. */
+  const dottedPath = (a, b) => {
+    const r = n => Math.round(n * 10) / 10, dx = (b.x + b.w / 2) - (a.x + a.w / 2);
+    if (Math.abs(dx) < (a.w + b.w) / 4) { // stacked: leave a near its bottom/top right corner, bulge right into b's right edge
+      const below = b.y >= a.y, sx = a.x + a.w * 0.8, sy = below ? a.y + a.h : a.y, ex = b.x + b.w, ey = b.y + b.h / 2, k = Math.max(40, Math.abs(ey - sy) / 2);
+      return `M${r(sx)},${r(sy)} C${r(sx)},${r(sy + (below ? k : -k))} ${r(ex + 60)},${r(ey)} ${r(ex)},${r(ey)}`;
+    }
+    const right = dx > 0, sx = right ? a.x + a.w : a.x, sy = a.y + a.h / 2, ex = right ? b.x : b.x + b.w, ey = b.y + b.h / 2, side = Math.max(40, Math.abs(ex - sx) * 0.4) * (right ? 1 : -1);
+    return `M${r(sx)},${r(sy)} C${r(sx + side)},${r(sy)} ${r(ex - side)},${r(ey)} ${r(ex)},${r(ey)}`;
+  };
+  function drawDotted() {
+    if (typeof document === 'undefined' || !ui.chart) return;
+    const box = document.querySelector('.pp-orgchart'), svg = box?.querySelector('svg.pp-oc-dotted');
+    if (!box || !svg || typeof box.getBoundingClientRect !== 'function') return;
+    const base = box.getBoundingClientRect(), cards = new Map([...box.querySelectorAll('[data-oc-id]')].map(el => [el.getAttribute('data-oc-id'), el]));
+    const rect = el => { const q = el.getBoundingClientRect(); return { x:q.left - base.left + (box.scrollLeft || 0), y:q.top - base.top + (box.scrollTop || 0), w:q.width, h:q.height }; };
+    // A collapsed (not rendered) card has no curve; its "第二领导：…" note on the card is the fallback.
+    const paths = dottedLinks(ui.chart.items).filter(([a, b]) => cards.has(a) && cards.has(b)).map(([a, b]) => `<path d="${dottedPath(rect(cards.get(a)), rect(cards.get(b)))}"><title>${esc(tr(`${nameOf(b)} 的第二领导：${nameOf(a)}`, `${nameOf(b)}’s second leader: ${nameOf(a)}`))}</title></path>`);
+    svg.setAttribute('width', String(box.scrollWidth || 0)); svg.setAttribute('height', String(box.scrollHeight || 0));
+    svg.innerHTML = paths.join('');
+  }
+  let dottedResize = false;
   function orgChart(items) {
     const ids = new Set(items.map(u => u.id));
     const kids = new Map(); items.forEach(u => { const k = u.manager_id && ids.has(u.manager_id) ? u.manager_id : '__root'; if (!kids.has(k)) kids.set(k, []); kids.get(k).push(u); });
+    const links = dottedLinks(items), shown = new Set();
+    const roots = kids.get('__root') || [];
+    const unassigned = roots.filter(u => !kids.get(u.id)?.length && roots.length > 1), tops = roots.filter(u => !unassigned.includes(u));
+    const walk = u => { if (shown.has(u.id)) return; shown.add(u.id); if (!ui.chartCollapsed.has(u.id)) (kids.get(u.id) || []).forEach(walk); }; tops.forEach(walk);
+    const leaderNote = u => { const first = u.manager_id && ids.has(u.manager_id) ? nameOf(u.manager_id) : '', second = u.second_manager_id && ids.has(u.second_manager_id) ? nameOf(u.second_manager_id) : '';
+      return [first && tr(`第一领导：${first}`, `First leader: ${first}`), second && tr(`第二领导：${second}`, `Second leader: ${second}`)].filter(Boolean).join(tr('；', '; ')); };
     const locs = [...new Set(items.map(locKey).filter(Boolean))];
     const locColor = l => LOC_COLORS[locs.indexOf(l) % LOC_COLORS.length] || '#c4c4c4';
     const size = id => (kids.get(id) || []).reduce((n, k) => n + 1 + size(k.id), 0);
     const node = u => { const ch = kids.get(u.id) || [], collapsed = ui.chartCollapsed.has(u.id), l = locKey(u), dim = ui.chartLoc && l !== ui.chartLoc;
-      return `<li><div class="pp-oc-card ${u.id === me()?.id ? 'me' : ''} ${dim ? 'dim' : ''}" style="--lc:${locColor(l)}">${avatar(u, 44)}<div class="pp-oc-text"><strong>${esc(u.display_name)}</strong><span class="pp-oc-title">${esc(u.title ? (window.WorkOSTranslate?.text(u.title) ?? u.title) : (u.role === 'manager' ? tr('主管', 'Manager') : tr('员工', 'Employee')))}</span><span class="pp-oc-loc"><span class="pp-flag" aria-hidden="true">${l ? flagOf(l) : '📍'}</span> ${esc(l ? (window.WorkOSTranslate?.text(l) ?? l) : tr('未填写所在地', 'No location'))}</span></div>
+      const hiddenDotted = links.filter(([a, b]) => a === u.id && !shown.has(b)).map(([, b]) => nameOf(b)), note = leaderNote(u);
+      return `<li><div class="pp-oc-card ${u.id === me()?.id ? 'me' : ''} ${dim ? 'dim' : ''}" data-oc-id="${esc(u.id)}" ${note ? `title="${esc(note)}"` : ''} style="--lc:${locColor(l)}">${avatar(u, 44)}<div class="pp-oc-text"><strong>${esc(u.display_name)}</strong><span class="pp-oc-title">${esc(u.title ? (window.WorkOSTranslate?.text(u.title) ?? u.title) : (u.role === 'manager' ? tr('主管', 'Manager') : tr('员工', 'Employee')))}</span><span class="pp-oc-loc"><span class="pp-flag" aria-hidden="true">${l ? flagOf(l) : '📍'}</span> ${esc(l ? (window.WorkOSTranslate?.text(l) ?? l) : tr('未填写所在地', 'No location'))}</span>${u.second_manager_id && ids.has(u.second_manager_id) ? `<span class="pp-oc-second">${icon('git-branch')} ${esc(tr(`第二领导：${nameOf(u.second_manager_id)}`, `2nd leader: ${nameOf(u.second_manager_id)}`))}</span>` : ''}${hiddenDotted.length ? `<span class="pp-oc-second">${icon('git-branch')} ${esc(tr(`虚线下属（已收起）：${hiddenDotted.join('、')}`, `Dotted-line reports (collapsed): ${hiddenDotted.join(', ')}`))}</span>` : ''}</div>
         ${ch.length ? `<button class="pp-oc-toggle" data-pp="chart-toggle" data-id="${esc(u.id)}" aria-expanded="${!collapsed}" title="${collapsed ? tr('展开下属', 'Show reports') : tr('收起下属', 'Hide reports')}">${collapsed ? `+${size(u.id)}` : icon('minus')}</button>` : ''}</div>${ch.length && !collapsed ? `<ul>${ch.map(node).join('')}</ul>` : ''}</li>`; };
-    const roots = kids.get('__root') || [];
-    const unassigned = roots.filter(u => !kids.get(u.id)?.length && roots.length > 1), tops = roots.filter(u => !unassigned.includes(u));
     const legend = locs.length ? `<div class="pp-oc-legend">${icon('map-pin')} ${locs.map(l => `<button class="${ui.chartLoc === l ? 'on' : ''}" data-pp="chart-loc" data-v="${esc(l)}" style="--lc:${locColor(l)}"><i></i>${flagOf(l)} ${esc(window.WorkOSTranslate?.text(l) ?? l)} <b>${items.filter(u => locKey(u) === l).length}</b></button>`).join('')}</div>` : '';
-    return `<section class="pp-panel pp-oc-panel"><div class="pp-oc-bar">${legend}<span class="pp-oc-count">${tr(`共 ${items.length} 人`, `${items.length} people`)}</span><button class="pp-btn small" data-pp="chart-expand">${icon('arrows-out-simple')} ${tr('全部展开', 'Expand all')}</button></div>
-      <div class="pp-orgchart"><ul>${tops.map(node).join('')}</ul></div>${unassigned.length ? `<h3 class="pp-sub-h">${tr('尚未设置汇报线', 'No reporting line yet')}</h3><div class="pp-unassigned">${unassigned.map(u => `<span>${avatar(u, 24)} ${esc(u.display_name)}${u.title ? ` · ${esc(u.title)}` : ''}${locKey(u) ? ` · ${esc(locKey(u))}` : ''}</span>`).join('')}</div>` : ''}</section>`;
+    if (links.length && typeof requestAnimationFrame === 'function') requestAnimationFrame(() => drawDotted());
+    if (links.length && !dottedResize && typeof window !== 'undefined' && window.addEventListener) { dottedResize = true; window.addEventListener('resize', () => drawDotted()); }
+    return `<section class="pp-panel pp-oc-panel"><div class="pp-oc-bar">${legend}${links.length ? `<span class="pp-oc-lines"><i class="solid" aria-hidden="true"></i>${tr('实线 = 第一领导', 'Solid = first leader')}<i class="dashed" aria-hidden="true"></i>${tr('虚线 = 第二领导', 'Dashed = second leader')}</span>` : ''}<span class="pp-oc-count">${tr(`共 ${items.length} 人`, `${items.length} people`)}</span><button class="pp-btn small" data-pp="chart-expand">${icon('arrows-out-simple')} ${tr('全部展开', 'Expand all')}</button></div>
+      <div class="pp-orgchart">${links.length ? '<svg class="pp-oc-dotted" aria-hidden="true"></svg>' : ''}<ul>${tops.map(node).join('')}</ul></div>${unassigned.length ? `<h3 class="pp-sub-h">${tr('尚未设置汇报线', 'No reporting line yet')}</h3><div class="pp-unassigned">${unassigned.map(u => `<span>${avatar(u, 24)} ${esc(u.display_name)}${u.title ? ` · ${esc(u.title)}` : ''}${locKey(u) ? ` · ${esc(locKey(u))}` : ''}</span>`).join('')}</div>` : ''}</section>`;
   }
   function chartPage() {
     const head = heading(tr('组织架构', 'Org chart'), tr('公司的汇报关系，以及每个人的岗位和所在地。点卡片右下角可以收起或展开下属，点所在地只突出显示该地的人。', 'Company reporting lines with each person’s role and location. Use the button on a card to collapse its reports; click a location to highlight it.'));
@@ -299,9 +352,9 @@
     try {
       const row = await ctx.api.request('/org/members/' + encodeURIComponent(id), { method:'PATCH', body });
       ui.org.items = ui.org.items.map(u => u.id === id ? { ...u, ...row } : u);
-      const dirUser = S().directory.find(u => u.id === id); if (dirUser) Object.assign(dirUser, { title:row.title, location:row.location, manager_id:row.manager_id, role:row.role, name_zh:row.name_zh, name_en:row.name_en });
+      const dirUser = S().directory.find(u => u.id === id); if (dirUser) Object.assign(dirUser, { title:row.title, location:row.location, manager_id:row.manager_id, second_manager_id:row.second_manager_id ?? null, role:row.role, name_zh:row.name_zh, name_en:row.name_en });
       if (id === me().id) await ctx.refreshMe();
-      if ('managerId' in body && ctx.reloadDirectory) { try { await ctx.reloadDirectory(); } catch {} }
+      if (('managerId' in body || 'secondManagerId' in body) && ctx.reloadDirectory) { try { await ctx.reloadDirectory(); } catch {} }
       ui.team = null; ui.chart = null; ctx.toast(tr('已保存', 'Saved'));
     } catch (e) { ctx.toast(ctx.explainError(e)); }
     ctx.rerender();
@@ -337,13 +390,19 @@
       catch (err) { ctx.toast(ctx.explainError(err)); }
       return;
     }
-    if (el.matches('[data-pp-field]')) { const v = el.value.trim(), f = el.dataset.ppField; return patchMember(el.dataset.id, { [f]:f === 'managerId' ? (v || null) : v }); }
+    if (el.matches('[data-pp-field]')) { const v = el.value.trim(), f = el.dataset.ppField; if (f === 'email' && (!v || !el.checkValidity())) { ctx.toast(tr('请填写有效的邮箱地址', 'Enter a valid email address')); return; } return patchMember(el.dataset.id, { [f]:f === 'managerId' || f === 'secondManagerId' ? (v || null) : v }); }
     if (el.matches('[data-pp-admin]')) return patchMember(el.dataset.id, { isAdmin:el.checked });
     if (el.matches('[data-pp-status]')) {
       if (el.checked) { ui.disabling = null; return ctx.rerender(); }
       const id = el.dataset.id; ui.disabling = { id, counts:null }; ctx.rerender();
       try { const counts = await ctx.api.get('/org/members/' + encodeURIComponent(id) + '/open-tasks'); if (ui.disabling?.id === id) { ui.disabling.counts = counts; ctx.rerender(); } } catch {}
       return;
+    }
+    if (el.matches('[data-pp-hr]')) {
+      const u = ui.org.items.find(x => x.id === el.dataset.id), r = el.dataset.ppHr;
+      const g = new Set((u.grants || []).filter(x => x !== `hr_${r}_view` && x !== `hr_${r}_manage`));
+      if (el.value) g.add(`hr_${r}_${el.value}`);
+      return patchMember(u.id, { grants:[...g] });
     }
     if (el.matches('[data-pp-grant]')) {
       const u = ui.org.items.find(x => x.id === el.dataset.id), g = new Set(u.grants || []);
@@ -370,6 +429,7 @@
       e.preventDefault(); const fd = new FormData(f), grants = [];
       if (fd.get('products')) grants.push('products'); if (fd.get('products') && fd.get('product_cost_detail')) grants.push('product_cost_detail');
       const body = { displayName:String(fd.get('displayName') || '').trim(), email:String(fd.get('email') || '').trim(), title:String(fd.get('title') || '').trim(), location:String(fd.get('location') || '').trim(), managerId:fd.get('managerId') ? String(fd.get('managerId')) : null, role:String(fd.get('role') || 'employee'), grants };
+      if (fd.get('factory')) { body.factory = String(fd.get('factory')); body.role = 'employee'; body.grants = []; }
       if (ui.invites?.emailDelivery) body.sendEmail = !!fd.get('sendEmail');
       ui.inviteBusy = true; ui.inviteError = ''; ctx.rerender();
       try { const r = await ctx.api.request('/org/invites', { method:'POST', body }); ui.inviteResult = r; ui.invites = ui.invites || { items:[] }; ui.invites.items = [r, ...ui.invites.items]; }
@@ -384,5 +444,5 @@
     ctx.rerender();
   });
 
-  window.WorkOSPeople = { configure(next) { ctx = next; }, avatar, workbench, team, settings, org, chart:chartPage, reset() { ui.team = null; ui.org = null; ui.chart = null; ui.teamOpen.clear(); }, _ui:ui };
+  window.WorkOSPeople = { configure(next) { ctx = next; }, avatar, workbench, team, settings, org, chart:chartPage, _dotted:{ links:dottedLinks, path:dottedPath, draw:drawDotted }, reset() { ui.team = null; ui.org = null; ui.chart = null; ui.teamOpen.clear(); }, _ui:ui };
 })();
