@@ -34,6 +34,9 @@ window.WORKOS_CONFIG = Object.freeze({ mode: 'live', apiBase: '/api' });
     { id:'s1', version:1, title:'网站配件页，大图加 logo', description:'1、网站配件页，大图加 logo', created_at:day(-1), attachments:[att('a1','配件主图-1.png'), att('a2','配件主图-2.png')] },
     { id:'s2', version:2, title:'补图', description:'补图', created_at:iso(now), attachments:[att('a3','补图-1.png'), att('a4','补图-2.png')] } ] });
   for (const t of tasks.slice(1)) Object.assign(t, { submission_version:0, submissions:[], reviews:[] });
+  // v1.42: a task you (a manager here, but any role works now) gave Amy, waiting for your review.
+  tasks.push(base('t4','整理 11 月竞品价格表',{ owner_id:'u3', created_by:'u1', assigned_by:'u1', reviewer_id:'u1', source:'direct', description:'收集三个品牌主要机型的售价和促销。', criteria:['覆盖 3 个品牌'], board_priority:'medium', due_at:day(3), status:'submitted', board_status:'review', version:2, submission_version:1, reviews:[], submissions:[
+    { id:'s9', version:1, title:'价格表初版', description:'价格表初版，已覆盖 3 个品牌（附截图）。', created_at:day(-1), attachments:[att('a3','价格表截图.png')] } ] }));
   const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers:{ 'Content-Type':'application/json' } });
   const view = { sort:[{field:'priority',direction:'asc'},{field:'due',direction:'asc'}], groupBy:'group', hidden:[], collapsed:[] };
   const board = () => ({ config, version:1, items:structuredClone(tasks), view:structuredClone(view), serverNow:iso(now), personalGroups:[] });
@@ -47,6 +50,8 @@ window.WORKOS_CONFIG = Object.freeze({ mode: 'live', apiBase: '/api' });
     let m;
     if ((m = path.match(/^\/tasks\/([^/]+)\/attachments$/)) && method === 'POST') { const id = 'up' + (++seq); files.set(id, 'data:' + body.mime + ';base64,' + body.dataBase64); uploads.set(id, { id, name:body.name, mime:body.mime, size:Math.round(body.dataBase64.length * .75), uploader_id:'u1' }); return json(uploads.get(id), 201); }
     if ((m = path.match(/^\/tasks\/([^/]+)\/submissions$/)) && method === 'POST') { const t = tasks.find(x => x.id === m[1]); const version = t.submission_version + 1; t.submissions.push({ id:'s' + (++seq), version, title:body.description.split('\n')[0].slice(0, 60), description:body.description, created_at:iso(Date.now()), attachments:(body.attachmentIds || []).map(id => uploads.get(id)) }); t.submission_version = version; t.version += 1; t.status = 'submitted'; return json({ submission:t.submissions.at(-1), taskVersion:t.version }, 201); }
+    if ((m = path.match(/^\/tasks\/([^/]+)\/reviews$/)) && method === 'POST') { const t = tasks.find(x => x.id === m[1]); const r = { id:'r' + (++seq), task_id:t.id, submission_version:body.submissionVersion, reviewer_id:me.id, decision:body.decision, quality:body.decision === 'accept' ? body.quality : null, note:body.note, created_at:iso(Date.now()) }; t.reviews.push(r); Object.assign(t, { version:t.version + 1, status:body.decision === 'accept' ? 'accepted' : 'revision', board_status:body.decision === 'accept' ? 'done' : 'working', board_done_at:body.decision === 'accept' ? r.created_at : null, currentReview:body.decision === 'accept' ? r : null }); return json({ review:r, taskVersion:t.version }, 201); }
+    if ((m = path.match(/^\/tasks\/([^/]+)\/complete$/)) && method === 'POST') { const t = tasks.find(x => x.id === m[1]); if (t.reviewer_id !== t.owner_id && (t.assigned_by || t.created_by) !== t.owner_id) return json({ error:{ code:'REVIEW_REQUIRED', message:'这项任务是别人下达的：请提交成果版本，验收人确认后自动算完成。' } }, 409); }
     if (path === '/auth/csrf') return json({ csrfToken:'preview' });
     if (path === '/capabilities') return json({ assignTasks:true, taskCompletion:true, orgProfiles:true, feedback:true, projects:false });
     if (path === '/me') { return json(me); } 
